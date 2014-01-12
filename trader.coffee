@@ -3,6 +3,7 @@ logger = require 'winston'
 vm = require 'vm'
 Fiber = require 'fibers'
 inspect = require('./utils').inspect
+printDate = require('./utils').printDate
 Instrument = require './instrument'
 talib = require './talib_sync'
 
@@ -118,16 +119,20 @@ class Trader
             if cb?
               cb()
       if orderId
-        datetime = new Date(order.at)
-        datetime = datetime.toLocaleString()
+        # Date prefix in case we are backtesting
+        dateprefix = ""
+
+        if @config.platform == "backtest"
+          dateprefix = printDate(new Date(order.at)) + " - "
+
         switch order.type
           when 'buy'
             amount = order.amount or @sandbox.portfolio.positions[order.curr].amount / order.price
-            logger.info "#{datetime}: BUY order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
+            logger.info "#{dateprefix}BUY order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
             break
           when 'sell'
             amount = order.amount or @sandbox.portfolio.positions[order.asset].amount
-            logger.info "#{datetime}: SELL order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
+            logger.info "#{dateprefix}SELL order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
             break
         setTimeout =>
           platform.isOrderActive orderId,(err,active)=>
