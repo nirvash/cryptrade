@@ -1,6 +1,6 @@
 platform: "backtest"
 instrument: "btc_usd"
-init_data_length:250
+init_data_length:248
 
 platforms:
   backtest:
