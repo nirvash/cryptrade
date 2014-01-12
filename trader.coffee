@@ -134,6 +134,7 @@ class Trader
             amount = order.amount or @sandbox.portfolio.positions[order.asset].amount
             logger.info "#{dateprefix}SELL order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
             break
+        # TODO: timeouts for backtesting. Currently the check_order_interval is set to 0
         setTimeout =>
           platform.isOrderActive orderId,(err,active)=>
             if err?

@@ -12,17 +12,26 @@ deepclone = require('./utils').deepclone
 logger.remove logger.transports.Console
 logger.add logger.transports.Console,{level:'info',colorize:true,timestamp:true}
 
-
 if require.main == module
   program = require('commander')
   program
     .usage('[options] <filename>')
     .option('-c,--config [value]','Load configuration file')
     .option('-i,--instrument [value]','Trade instrument (ex. btc_usd)')
-    .option('-s,--initial [value]','Number of trades that are used for initialization (ex. 248)')
+    .option('-s,--initial [value]','Number of trades that are used for initialization (ex. 248)',parseInt)
+    .option('-p,--portfolio <asset,curr>','Initial portfolio (ex. 0,5000)',(val)->val.split(',').map(Number))
+    .option('-f,--fee [value]','Fee on every trade in percent (ex. 0.5)',parseFloat)
     .parse process.argv
 
-  config = CSON.parseFileSync './backtest_config.cson'
+  config = CSON.parseFileSync './config.cson'
+
+  # TODO: make this a separate option.
+  #       That way, when the user does not have to specify the trade data
+  #       directly, the platform to use for backtesting can be specified
+  config.platform = "backtest"
+
+  # TODO: Cannot simulate the check order interval just yet. See trader.coffee
+  config.check_order_interval = 0
 
   if program.config?
     logger.info "Loading configuration file configs/#{program.config}.cson.."
@@ -55,9 +64,14 @@ if require.main == module
     process.exit 1
   data = JSON.parse(data)
 
-  # Configuration of instrument
-  config.instrument = program.instrument or config.instrument or 'btc_usd'
-  config.init_data_length = program.initial or config.init_data_length or 250
+  # Configuration of other options
+  config.instrument = program.instrument or config.instrument
+  config.init_data_length = program.initial or config.init_data_length
+  pl = config.platforms[config.platform]
+  pl.fee = program.fee or pl.fee
+  if program.portfolio?
+    for x,i in config.instrument.split('_')
+      pl.initial_portfolio[x] = program.portfolio[i]
 
   script = CoffeeScript.compile code,
     bare:true
