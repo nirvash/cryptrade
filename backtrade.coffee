@@ -6,6 +6,7 @@ basename = require('path').basename
 Trader = require './trader'
 logger = require 'winston'
 Fiber = require 'fibers'
+deepclone = require('./utils').deepclone
 
 logger.remove logger.transports.Console
 logger.add logger.transports.Console,{level:'info',colorize:true,timestamp:true}
@@ -15,31 +16,6 @@ source = "./j9YKW6GtMSnePrjTK.coffee"
 data = require "./j9YKW6GtMSnePrjTK.json"
 pair = "btc_usd"
 config = CSON.parseFileSync './backtest_config.cson'
-
-# Deep copy
-# Taken from http://coffeescriptcookbook.com/chapters/classes_and_objects/cloning
-clone = (obj) ->
-  if not obj? or typeof obj isnt 'object'
-    return obj
-
-  if obj instanceof Date
-    return new Date(obj.getTime())
-
-  if obj instanceof RegExp
-    flags = ''
-    flags += 'g' if obj.global?
-    flags += 'i' if obj.ignoreCase?
-    flags += 'm' if obj.multiline?
-    flags += 'y' if obj.sticky?
-    return new RegExp(obj.source, flags)
-
-  newInstance = new obj.constructor()
-
-  for key of obj
-    newInstance[key] = clone obj[key]
-
-  return newInstance
-
 
 # THE CODE
 instrument = data[pair]
@@ -65,7 +41,7 @@ trader = new Trader name,config,null,script
 elems = ["open", "close", "high", "low", "volumes", "ticks"]
 
 
-temp = clone(data) # We don't want to ruin the original data
+temp = deepclone(data) # We don't want to ruin the original data
 temp_instrument = temp[pair]
 
 for el in elems
@@ -80,7 +56,7 @@ temp.at = temp_instrument.ticks[last_i].at
 
 Fiber =>
   # Initialize the trader with the initial data
-  bars = clone temp_instrument.ticks
+  bars = deepclone temp_instrument.ticks
   trader.init(bars)
 
 
@@ -92,7 +68,7 @@ Fiber =>
       a = instrument[el]
       b = temp_instrument[el]
 
-      o = clone(a[i])
+      o = deepclone(a[i])
       b.push(o)
 
 
