@@ -1,0 +1,10 @@
+platform: "backtest"
+instrument: "btc_usd"
+init_data_length:250
+
+platforms:
+  backtest:
+    initial_portfolio:
+      usd: 1000
+      btc: 0
+    fee: 0.2

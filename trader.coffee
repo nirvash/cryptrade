@@ -21,6 +21,7 @@ class Trader
         logger.info message
       buy: (instrument,amount,cb)=>
         @trade
+          at: @data.at
           asset: instrument.asset()
           curr: instrument.curr()
           platform: instrument.platform
@@ -29,6 +30,7 @@ class Trader
         ,cb
       sell: (instrument,amount,cb)=>
         @trade
+          at: @data.at
           asset: instrument.asset()
           curr: instrument.curr()
           platform: instrument.platform
@@ -116,14 +118,16 @@ class Trader
             if cb?
               cb()
       if orderId
+        datetime = new Date(order.at)
+        datetime = datetime.toLocaleString()
         switch order.type
           when 'buy'
             amount = order.amount or @sandbox.portfolio.positions[order.curr].amount / order.price
-            logger.info "BUY order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
+            logger.info "#{datetime}: BUY order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
             break
           when 'sell'
             amount = order.amount or @sandbox.portfolio.positions[order.asset].amount
-            logger.info "SELL order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
+            logger.info "#{datetime}: SELL order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
             break
         setTimeout =>
           platform.isOrderActive orderId,(err,active)=>
@@ -157,10 +161,21 @@ class Trader
     instrument = @data[bar.instrument]
     instrument.update bar
     @data.at = bar.at
+
+    # TODO: Not the prettiest solution to set the ticker price here
+    #       Is there any prettier way?
+    if @config.platform == "backtest"
+      instrument.platform.setTicker(bar.close, bar.close, null)
+
+    # Continue as usual
     @updateTicker instrument.platform, =>
       @updatePortfolio instrument.pair,instrument.platform, =>
-        Fiber =>
+        if @config.platform == "backtest"
+          # We are already in a fiber
           @sandbox.handle @context, @data
-        .run()
+        else
+          Fiber =>
+            @sandbox.handle @context, @data
+          .run()
     
 module.exports = Trader
