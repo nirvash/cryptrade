@@ -83,7 +83,7 @@ if require.main == module
       period:config.period
       limit:config.init_data_length
   client.on 'data_message', (msg)->
-    logger.warn 'Server message: '+err
+    logger.warn 'Server message: '+msg
   client.on 'data_error', (err)->
     logger.error err
   client.on 'data_init',(bars)->
