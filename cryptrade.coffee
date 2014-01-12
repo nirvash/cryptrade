@@ -53,7 +53,7 @@ if require.main == module
     backtest = JSON.parse data
     platform = backtest.platform
     instrument = backtest.instrument
-    period = backtest.period
+    period = backtest.period #FIXME: Period is not included in the JSON of backtest urls!
     name = m[1]
     code = backtest.code
   else 
