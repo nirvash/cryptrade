@@ -20,7 +20,7 @@ class Trader
         logger.info message
       warn: (message)->
         logger.info message
-      buy: (instrument,amount,price,time,cb)=>
+      buy: (instrument,amount,price,timeout,cb)=>
         @trade
           at: @data.at
           asset: instrument.asset()
@@ -29,9 +29,9 @@ class Trader
           type: 'buy'
           amount: amount
           price:price
-          time:time
+          timeout:timeout
         ,cb
-      sell: (instrument,amount,price,time,cb)=>
+      sell: (instrument,amount,price,timeout,cb)=>
         @trade
           at: @data.at
           asset: instrument.asset()
@@ -40,7 +40,7 @@ class Trader
           type: 'sell'
           amount: amount
           price:price
-          time:time
+          timeout:timeout
         ,cb
       plot: (series)->
         # do nothing
@@ -99,12 +99,12 @@ class Trader
     switch order.type
       when 'buy'
         order.price ?= @ticker.buy
-        order.time ?= @config.check_order_interval
+        order.timeout ?= @config.check_order_interval
         order.maxAmount = order.amount or @sandbox.portfolio.positions[order.curr].amount / order.price
         break
       when 'sell'
         order.price ?= @ticker.sell
-        order.time ?= @config.check_order_interval
+        order.timeout ?= @config.check_order_interval
         order.maxAmount = order.amount or @sandbox.portfolio.positions[order.asset].amount
         break
     platform.trade order, (err,orderId)=>
@@ -146,7 +146,7 @@ class Trader
             if err?
               logger.error err
             if active
-              logger.info "Canceling order ##{orderId} as it was inactive for #{order.time} seconds."
+              logger.info "Canceling order ##{orderId} as it was inactive for #{order.timeout} seconds."
               platform.cancelOrder orderId, (err)=>
                 if err?
                   logger.error err
@@ -157,7 +157,7 @@ class Trader
                       @trade order, cb
             else
               orderCb()
-        ,order.time*1000
+        ,order.timeout*1000
       else
         orderCb()
 
