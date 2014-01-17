@@ -35,6 +35,8 @@ By default, it will use all the settings in your config.cson, and that is all yo
       
 
 Backtesting on this version works correctly. Limit orders are yet untested to my knowledge, feedback on it would be appreciated. 
+
+Also, if somebody is using the live version of cryptotrader.org, it would be very helpful if you could capture the request when turning offset on to a certain value. If you do that, I could add offsets to cryptrade, assuming they've implemented it within their API. I do have an alternative to offseting as well though, although it would be better to come straight off their API.
       
 
 Original Readme can be found here: https://github.com/pulsecat/cryptrade
