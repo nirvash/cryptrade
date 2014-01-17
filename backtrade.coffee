@@ -18,15 +18,13 @@ if require.main == module
   program
     .usage('[options] <filename>')
     .option('-c,--config [value]','Load configuration file')
+    .option('-p,--platform [value]','Trade at specified platform')
     .option('-i,--instrument [value]','Trade instrument (ex. btc_usd)')
     .option('-s,--initial [value]','Number of trades that are used for initialization (ex. 248)',parseInt)
-    .option('-p,--portfolio <asset,curr>','Initial portfolio (ex. 0,5000)',(val)->val.split(',').map(Number))
-    .option('-f,--fee [value]','Fee on every trade in percent (ex. 0.5)',parseFloat)
+    .option('-b,--balance <asset,curr>','Initial balances of trade instrument (ex. 0,5000)',(val)->val.split(',').map(Number))
+    .option('-f,--fee [value]','Fee on every trade in percent (ex. 0.2)',parseFloat)
     .option('-a,--add_length [value]','Additional initial periods to include (default: 100)',parseInt)
     .parse process.argv
-
-  #TODO add ability for backtest to have variable endpoint, rather than being most recent
-  #already have a quick fix, but will see if there is better solution
 
   #Configuration initialization
   config = CSON.parseFileSync './config.cson'
@@ -36,15 +34,14 @@ if require.main == module
     process.exit 1
   config.instrument = program.instrument or config.instrument
   config.init_data_length = program.initial or config.init_data_length
-  if program.portfolio?
+  if program.balance?
      for x,i in config.instrument.split('_')
-        pl.initial_portfolio[x] = program.portfolio[i]
+        pl.initial_balance[x] = program.balance[i]
   #This variable ensures an accurate backtest, by including a set amount of periods in the intial backtest. Should be at least equal to the period your longest indicator uses. Eg. EMA(200) should include at least 200 for add_length.
   add_length = program.add_length or 100
 
   # TODO: make this a separate option.
   #       That way, when the user does not have to specify the trade data
-  #       directly, the platform to use for backtesting can be specified
 
   # TODO: Cannot simulate the check order interval just yet. See trader.coffee
   config.check_order_interval = 0
