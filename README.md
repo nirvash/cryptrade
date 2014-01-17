@@ -6,11 +6,17 @@ Limit orders by shadww (untested?)
 
 Simpler and streamlined backtesting by D-Nice 
 
+
 If you found this tool helpful, consider donating:
 
-1DNiceqwCXFS9rxVddVGR2f6qtbwZiwLNV
+D-Nice: 1DNiceqwCXFS9rxVddVGR2f6qtbwZiwLNV
 
-If other developers that this current version is based off of would like their donation address added, please notify me
+pulsecat: cryptotrader.org (consider subscribing there :D)
+
+javdejong: 
+
+shadww: 149UTnSMy8nUc4qhsBsAiUXPE26XFQEhB8
+
 __________________________________________________
 ## Install
 
@@ -40,7 +46,9 @@ By default, it will use all the settings in your config.cson, and that is all yo
       -a,--add_length [value]  Additional initial periods to include (default: 100)
       
 
-Backtesting on this version works correctly. Limit orders are yet untested to my knowledge, feedback on it would be appreciated. 
+Backtesting on this version works correctly.
+Limit orders have been tested (by shadww) to sell on live data and works fine (sell instrument,amount,price,timeout).
+If you face any issue in a specific script please share it with us :)
 
 Also, if somebody is using the live version of cryptotrader.org, it would be very helpful if you could capture the request when turning offset on to a certain value. If you do that, I could add offsets to cryptrade, assuming they've implemented it within their API. I do have an alternative to offseting as well though, although it would be better to come straight off their API.
 
