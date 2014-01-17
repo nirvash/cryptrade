@@ -2,11 +2,12 @@ require "underscore"
 fs = require "fs"
 CoffeeScript = require 'coffee-script'
 CSON = require 'cson'
+io = require('socket.io-client')
 basename = require('path').basename
 Trader = require './trader'
 logger = require 'winston'
 Fiber = require 'fibers'
-deepclone = require('./utils').deepclone
+version = require('./package.json').version
 
 # TODO: Also make logger log to file? Although not really necessary for backtesting
 logger.remove logger.transports.Console
@@ -17,18 +18,31 @@ if require.main == module
   program
     .usage('[options] <filename>')
     .option('-c,--config [value]','Load configuration file')
+    .option('-p,--platform [value]','Trade at specified platform')
     .option('-i,--instrument [value]','Trade instrument (ex. btc_usd)')
     .option('-s,--initial [value]','Number of trades that are used for initialization (ex. 248)',parseInt)
-    .option('-p,--portfolio <asset,curr>','Initial portfolio (ex. 0,5000)',(val)->val.split(',').map(Number))
-    .option('-f,--fee [value]','Fee on every trade in percent (ex. 0.5)',parseFloat)
+    .option('-b,--balance <asset,curr>','Initial balances of trade instrument (ex. 0,5000)',(val)->val.split(',').map(Number))
+    .option('-f,--fee [value]','Fee on every trade in percent (ex. 0.2)',parseFloat)
+    .option('-a,--add_length [value]','Additional initial periods to include (default: 100)',parseInt)
     .parse process.argv
 
+  #Configuration initialization
   config = CSON.parseFileSync './config.cson'
+  keys = CSON.parseFileSync 'keys.cson'
+  unless keys?
+    logger.error 'Unable to open keys.cson'
+    process.exit 1
+  config.instrument = program.instrument or config.instrument
+  config.init_data_length = program.initial or config.init_data_length
+  if program.balance?
+     for x,i in config.instrument.split('_')
+        pl.initial_balance[x] = program.balance[i]
+  #This variable ensures an accurate backtest, by including a set amount of periods in the intial backtest. Should be at least equal to the period your longest indicator uses. Eg. EMA(200) should include at least 200 for add_length.
+  add_length = program.add_length or 100
+  config.platform = program.platform or config.platform
 
   # TODO: make this a separate option.
   #       That way, when the user does not have to specify the trade data
-  #       directly, the platform to use for backtesting can be specified
-  config.platform = "backtest"
 
   # TODO: Cannot simulate the check order interval just yet. See trader.coffee
   config.check_order_interval = 0
@@ -55,80 +69,49 @@ if require.main == module
     process.exit 1
 
   # Load trade data
-  # TODO: Use csv data, and let the user specify platform (mtgox,btce) and start/end times
-  datafile = basename(source,'.coffee') + ".json"
-  data = fs.readFileSync datafile,
-    encoding: 'utf8'
-  unless data?
-    logger.error "Unable load trade data from #{datafile}"
-    process.exit 1
-  data = JSON.parse(data)
+  logger.info 'Connecting to data provider..'
+  client = io.connect config.data_provider, config.socket_io
+  trader = undefined
+  client.socket.on 'connect', ->
+    logger.info "Subscribing to data source #{config.platform} #{config.instrument} #{config.period}"
+    client.emit 'subscribeDataSource', version, keys.cryptotrader.api_key,
+      platform:config.platform
+      instrument:config.instrument
+      period:config.period
+      limit:config.init_data_length + add_length
+  client.on 'data_message', (msg)->
+    logger.warn 'Server message: '+msg
+  client.on 'data_error', (err)->
+    logger.error err
+  client.on 'data_init',(bars)->
+    logger.verbose "Received historical market data #{bars.length} bar(s)"
 
-  # Configuration of other options
-  config.instrument = program.instrument or config.instrument
-  config.init_data_length = program.initial or config.init_data_length
-  pl = config.platforms[config.platform]
-  pl.fee = program.fee or pl.fee
-  if program.portfolio?
-    for x,i in config.instrument.split('_')
-      pl.initial_portfolio[x] = program.portfolio[i]
+    # Configuration of other options
+    pl = config.platforms[config.platform]
+    pl.fee = program.fee or pl.fee
 
-  script = CoffeeScript.compile code,
-    bare:true
-  logger.info 'Starting backtest...'
+    script = CoffeeScript.compile code,
+       bare:true
+    logger.info 'Starting backtest...'
 
-  # Intialize a trader instance, no key
-  trader = new Trader name,config,null,script
+    # Intialize a trader instance, no key, set backtest config
+    config.platform = 'backtest'
+    trader = new Trader name,config,null,script
 
-  # Ready the initial data
-  elems = ["open", "close", "high", "low", "volumes", "ticks"]
+    length_end = config.init_data_length + add_length - 1
 
-  instrument = data[config.instrument]
-  data.instruments[0] = instrument # Fix the reference
-
-  length_end = instrument.open.length
-
-  temp = deepclone(data) # We don't want to ruin the original data
-  temp_instrument = temp[config.instrument]
-
-  for el in elems
-    t = instrument[el]
-    temp_instrument[el] = t[...config.init_data_length]
-
-  last_i = temp_instrument.close.length - 1 # Asserted that all arrays are of equal length
-
-  temp_instrument["price"] = temp_instrument.close[last_i]
-  temp_instrument["volume"] = temp_instrument.volumes[last_i]
-  temp.at = temp_instrument.ticks[last_i].at
-
-  Fiber =>
-    # Initialize the trader with the initial data
-    bars = deepclone temp_instrument.ticks
-    trader.init(bars)
+    Fiber =>
+       # Initialize the trader with the initial data
+       trader.init(bars[0...add_length])
 
 
-    # Gradually extend the object
-    for i in [config.init_data_length...length_end-1]
-    #for i in [length_initial...length_initial+1]
-      # Array stuff
-      for el in elems
-        a = instrument[el]
-        b = temp_instrument[el]
-
-        o = deepclone(a[i])
-        b.push(o)
-
-
-      # Non-array stuff
-      last_i = temp_instrument.close.length - 1 # Asserted that all arrays are of equal length
-    #  console.log "i: #{i}, last_i: #{last_i}"
-
-      temp_instrument["price"] = temp_instrument.close[last_i]
-      temp_instrument["volume"] = temp_instrument.volumes[last_i]
-      temp.at = temp_instrument.ticks[last_i].at
-
-      # Trader gets the last bar = tick
-      bar = temp_instrument.ticks[last_i]
-      bar.instrument = config.instrument
-      trader.handle bar
-  .run()
+       # Gradually keep passing bars incrementally to trader
+       for i in [add_length...length_end]
+         bar = bars[i]
+         trader.handle bar
+         #TODO Add profit/loss calculation, and gains/losses quantitatively
+         if i is length_end-1
+            start_date = new Date(bars[add_length].at)
+            end_date = new Date(bars[length_end].at)
+            setTimeout (-> logger.info '\nSimulation started ' + start_date + '\nSimulation ended ' + end_date), 2000 
+     .run()
