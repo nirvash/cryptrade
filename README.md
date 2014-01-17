@@ -41,6 +41,7 @@ Also, if somebody is using the live version of cryptotrader.org, it would be ver
 ## FAQ
 
 Q: The backtest is buying and selling even when my portfolio is empty
+
 A: You must include the following code or some other variation, within your trading script, that ensures it does not buy or sell if needed balance isn't available. Example in EMA_10_21
 Beginning of my EMA Script:
 
