@@ -12,6 +12,12 @@ If you found this tool helpful, consider donating:
 
 If other developers that this current version is based off of would like their donation address added, please notify me
 __________________________________________________
+## Install
+
+    git clone https://github.com/shadww/cryptrade.git
+    cd cryptrade
+    npm install (or sudo npm install if you are having trouble with npm update later on)
+
 ## Usage
 
 For backtesting type
