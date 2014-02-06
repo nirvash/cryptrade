@@ -79,12 +79,14 @@ if require.main == module
       instrument:config.instrument
       period:config.period
       limit:config.init_data_length + add_length
+  client.on 'disconnect', ->
+    logger.verbose "Disconeected."
   client.on 'data_message', (msg)->
     logger.warn 'Server message: '+msg
   client.on 'data_error', (err)->
     logger.error err
   client.on 'data_init',(bars)->
-    logger.verbose "Received historical market data #{bars.length} bar(s)"
+    logger.info "Received historical market data #{bars.length} bar(s)"
 
     # Configuration of other options
     pl = config.platforms[config.platform]
@@ -113,5 +115,8 @@ if require.main == module
          if i is length_end-1
             start_date = new Date(bars[add_length].at)
             end_date = new Date(bars[length_end].at)
-            setTimeout (-> logger.info '\nSimulation started ' + start_date + '\nSimulation ended ' + end_date), 2000 
+            setTimeout (->
+              logger.info '\nSimulation started ' + start_date + '\nSimulation ended ' + end_date
+              client.disconnect()
+              ), 2000 
      .run()
