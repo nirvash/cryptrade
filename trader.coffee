@@ -28,8 +28,8 @@ class Trader
           platform: instrument.platform
           type: 'buy'
           amount: amount
-          price: price
-          timeout: timeout
+          iprice: price
+          itimeout: timeout
         ,cb
       sell: (instrument,amount,price,timeout,cb)=>
         @trade
@@ -39,8 +39,8 @@ class Trader
           platform: instrument.platform
           type: 'sell'
           amount: amount
-          price: price
-          timeout: timeout
+          iprice: price
+          itimeout: timeout
         ,cb
       plot: (series)->
         # do nothing
@@ -98,13 +98,13 @@ class Trader
     platform = order.platform
     switch order.type
       when 'buy'
-        order.price = order.price or @ticker.buy
-        order.timeout = order.timeout or @config.check_order_interval
+        order.price = order.iprice or @ticker.buy
+        order.timeout = order.itimeout or @config.check_order_interval
         order.maxAmount = order.amount or @sandbox.portfolio.positions[order.curr].amount / order.price
         break
       when 'sell'
-        order.price = order.price or @ticker.sell
-        order.timeout = order.timeout or @config.check_order_interval
+        order.price = order.iprice or @ticker.sell
+        order.timeout = order.itimeout or @config.check_order_interval
         order.maxAmount = order.amount or @sandbox.portfolio.positions[order.asset].amount
         break
     platform.trade order, (err,orderId)=>
