@@ -1,3 +1,9 @@
+class Functions
+    @can_buy: (ins, min_btc, fee_percent) ->
+        portfolio.positions[ins.curr()].amount >= ((ins.price * min_btc) * (1 + fee_percent / 100))
+    @can_sell: (ins, min_btc) ->
+        portfolio.positions[ins.asset()].amount >= min_btc
+
 class Ichimoku
     constructor: (@tenkan_n = 9,@kijun_n = 26)->
         @tenkan = Array(@kijun_n)
@@ -63,7 +69,7 @@ handle: (context, data)->
             context.pos = 'long'
         else if context.pos == 'long' and c.tenkan < c.kijun
             context.pos = 'short'
-    if context.pos == 'long'
+    if context.pos == 'long' and Functions.can_buy(instrument, .01, .55)
         buy(instrument)
-    else if context.pos == 'short'
+    else if context.pos == 'short' and Functions.can_sell(instrument, .01)
         sell(instrument)  

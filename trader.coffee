@@ -91,7 +91,7 @@ class Trader
     if @ticker?
       result += "(#{amount*@ticker.sell} #{curr.toUpperCase()}) "
     cash = @sandbox.portfolio.positions[curr].amount
-    result += "#{cash} #{curr.toUpperCase()}"
+    result += ", #{cash.toFixed(8)} #{curr.toUpperCase()}"
     result
 
   trade: (order,cb)->
@@ -120,7 +120,10 @@ class Trader
         self.updatePortfolio [order.asset,order.curr], order.platform,(err)=>
           unless err?
             balance = self.calcPositions [order.asset,order.curr]
-            message = "#{order.type.toUpperCase()} order #{orderStr}traded. Balance: #{balance}"
+            orderType = "#{order.type.toUpperCase()}"
+            if orderType == "BUY"
+              orderType = "BUY "
+            message = "#{orderType} order #{orderStr}traded. Balance: #{balance}"
             self.sandbox.info message
             if cb?
               cb()
@@ -134,30 +137,33 @@ class Trader
         switch order.type
           when 'buy'
             amount = order.amount or @sandbox.portfolio.positions[order.curr].amount / order.price
-            logger.info "#{dateprefix}BUY order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
+            logger.info "#{dateprefix}BUY  order ##{orderId} amount: #{amount.toFixed(8)} #{order.asset.toUpperCase()} @ #{order.price.toFixed(8)}"
             break
           when 'sell'
             amount = order.amount or @sandbox.portfolio.positions[order.asset].amount
-            logger.info "#{dateprefix}SELL order ##{orderId} amount: #{amount} #{order.asset.toUpperCase()} @ #{order.price}"
+            logger.info "#{dateprefix}SELL order ##{orderId} amount: #{amount.toFixed(8)} #{order.asset.toUpperCase()} @ #{order.price.toFixed(8)}"
             break
         # TODO: timeouts for backtesting. Currently the check_order_interval is set to 0
-        setTimeout =>
-          platform.isOrderActive orderId,(err,active)=>
-            if err?
-              logger.error err
-            if active
-              logger.info "Canceling order ##{orderId} as it was inactive for #{order.timeout} seconds."
-              platform.cancelOrder orderId, (err)=>
-                if err?
-                  logger.error err
-                else
-                  logger.info "Creating new order.."
-                  @updateTicker platform,=>
-                    @updatePortfolio [order.asset,order.curr], order.platform,=>
-                      @trade order, cb
-            else
-              orderCb()
-        ,order.timeout*1000
+        if @config.platform == "backtest"
+          orderCb() # Do not user setTimeout to keep execution order.
+        else
+          setTimeout =>
+            platform.isOrderActive orderId,(err,active)=>
+              if err?
+                logger.error err
+              if active
+                logger.info "Canceling order ##{orderId} as it was inactive for #{order.timeout} seconds."
+                platform.cancelOrder orderId, (err)=>
+                  if err?
+                    logger.error err
+                  else
+                    logger.info "Creating new order.."
+                    @updateTicker platform,=>
+                      @updatePortfolio [order.asset,order.curr], order.platform,=>
+                        @trade order, cb
+              else
+                orderCb()
+          ,order.timeout*1000
       else
         orderCb()
 
