@@ -1,4 +1,4 @@
-require "underscore"
+_ = require 'underscore'
 fs = require "fs"
 CoffeeScript = require 'coffee-script'
 CSON = require 'cson'
@@ -45,7 +45,6 @@ if require.main == module
   #       That way, when the user does not have to specify the trade data
 
   # TODO: Cannot simulate the check order interval just yet. See trader.coffee
-  config.check_order_interval = 0
 
   if program.config?
     logger.info "Loading configuration file configs/#{program.config}.cson.."
